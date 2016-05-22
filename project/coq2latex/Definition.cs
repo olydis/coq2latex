@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -15,12 +16,26 @@ namespace coq2latex
 
         public Definition Replace(string from, string to)
         {
+            if (from == to)
+                return this;
+            Debug.WriteLine(from + " --> " + to);
             return new Definition
             {
                 Name = Name,
                 Bound = Bound,
                 Premises = Premises.Select(x => x.Replace(from, to)),
                 Conclusion = Conclusion.Replace(from, to)
+            };
+        }
+
+        public Definition EraseNamespaces()
+        {
+            return new Definition
+            {
+                Name = Name,
+                Bound = Bound,
+                Premises = Premises.Select(x => x.EraseNamespaces()),
+                Conclusion = Conclusion.EraseNamespaces()
             };
         }
 

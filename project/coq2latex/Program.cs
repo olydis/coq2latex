@@ -79,6 +79,36 @@ namespace coq2latex
             return rules;
         }
 
+        static List<string> ParseOriginalNames(string[] inputParts, string defName, string ctorName)
+        {
+            var regexRule = new Regex(@"Inductive\s+" + defName + @"(\s|\,|\:)");
+            var part = inputParts
+                .Select(x => x.Trim())
+                .LastOrDefault(regexRule.IsMatch);
+            if (part == null)
+                return null;
+            part = part.SplitBare(":=").Last();
+            var regexCtor = new Regex(@"^" + ctorName + @"\s*:\s*forall\s*(?<part>.*)");
+            part = part
+                .SplitBare("|")
+                .Select(x => x.Trim())
+                .FirstOrDefault(regexCtor.IsMatch);
+            if (part == null)
+                return null;
+            part = regexCtor.Match(part).Groups["part"].Value;
+            part = part.SplitBare(",").First();
+            var res = regexCoqExpression
+                .Matches(Regex.Replace(part, @"\(\*(.*?)\*\)", ""))
+                .OfType<Match>()
+                .SelectMany(m =>
+                {
+                    var s = m.Value.Trim();
+                    s = s.Split(':')[0].Trim().TrimStart('(');
+                    return s.Split().Where(t => t != "");
+                })
+                .ToList();
+            return res;
+        }
         static string ParseAlternativeName(string[] inputParts, string defName, string ctorName, string varName)
         {
             var regexRule = new Regex(@"Inductive\s+" + defName + @"(\s|\,|\:)");
@@ -103,11 +133,17 @@ namespace coq2latex
 
         static List<Definition> ParseDefinition(string input, string[] inputParts, string defName)
         {
+            // get local name
+            int localNameDot = defName.LastIndexOf('.') + 1;
+            string defNamespace = defName.Substring(0, localNameDot);
+            defName = defName.Substring(localNameDot);
+
             Match defMatch = Regex.Match(input, @"^Inductive " + defName + @" : (?<type>.*?)Prop :=\s*(?<body>.*)$",
                 RegexOptions.Multiline);
+            Debug.WriteLine(defMatch);
             if (!defMatch.Success)
                 return null;
-
+            
             var ctors = defMatch.Groups["body"].Value.Trim().SplitBare(" | ");
             var ctorDefs = new List<Definition>();
             foreach (var ctor in ctors)
@@ -120,8 +156,12 @@ namespace coq2latex
                 string body = ctorMatch.Groups["body"].Value;
                 // parse variable bindings and premises
                 var bodyParts = body.SplitBare(", ").ToList();
-                if (bodyParts.Count == 2 && bodyParts[0].StartsWith("forall"))
+                if (bodyParts.Count == 2 && bodyParts[0].StartsWith("forall "))
                 {
+                    // normalize
+                    if (!bodyParts[0].Contains("("))
+                        bodyParts[0] = bodyParts[0].Replace("forall ", "forall (") + ")";
+
                     var matches = regexCoqExpression.Matches(bodyParts[0]).OfType<Match>();
                     foreach (var match in matches.Skip(1))
                     {
@@ -142,13 +182,23 @@ namespace coq2latex
                     Premises = precond.Select(Expression.Parse),
                     Conclusion = Expression.Parse(bodyParts.Last())
                 };
+                // recover orig bound var names
+                var boundOrig = ParseOriginalNames(inputParts, defName, name);
+                if (boundOrig.Count != bound.Count)
+                    throw new FormatException("failure parsing original bound variable names for " + defName + "/" + name + " (count mismatch: " + string.Join(",", bound) + " vs " + string.Join(",", boundOrig) + ")");
+                for (int i = 0; i < bound.Count; ++i)
+                    def = def.Replace(bound[i], boundOrig[i]);
 
-                foreach(var from in bound)
+                // get user choices for bound var names
+                def = def.EraseNamespaces();
+                foreach(var from in boundOrig)
                 {
                     var to = ParseAlternativeName(inputParts, defName, name, from);
                     if (to != null)
-                        def = def.Replace(from, to);
+                        def = def.Replace(from, to == @"\" ? @"\" + from : to);
                 }
+
+                Debug.WriteLine(def);
 
                 // parse
                 ctorDefs.Add(def);
@@ -172,10 +222,12 @@ namespace coq2latex
                 args = new string[] { matchingRule.Rewrite(args.Take(matchingRule.Arity).ToArray()) }.Concat(
                     args.Skip(matchingRule.Arity)).ToList();
             else
-                args = new string[] { expr.Head }.Concat(
-                    args.Select(x => "(" + x + ")")).ToList();
+                args.Insert(0, expr.Head);
 
-            return string.Join("~", args);
+            if (args.Count == 1)
+                return args[0];
+            else
+                return args[0] + "(" + string.Join(", ", args.Skip(1)) + ")";
         }
 
         static string CreateLatex(Definition def, List<RewriteRule> rules)
@@ -201,6 +253,7 @@ namespace coq2latex
             Debug.Listeners.Add(new ConsoleTraceListener(true));
             
             string input = ReadInput();
+
             string[] inputParts = input.SplitBare(".").ToArray();
             var rewriteRules = ParseRewriteRules(input);
             foreach (var relation in relations)

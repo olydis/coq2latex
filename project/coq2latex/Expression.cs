@@ -39,6 +39,7 @@ namespace coq2latex
 
             return new Expression(expVar, tail);
         }
+
         static string ParseExpressionStr(ref string s)
         {
             if (s.StartsWith("(") || s.StartsWith(")")) return null;
@@ -66,6 +67,14 @@ namespace coq2latex
             return new Expression(
                 Head == from ? to : Head,
                 Tail.Select(x => x.Replace(from, to))
+                );
+        }
+
+        public Expression EraseNamespaces()
+        {
+            return new Expression(
+                Head.Split('.').Last(),
+                Tail.Select(x => x.EraseNamespaces())
                 );
         }
 
