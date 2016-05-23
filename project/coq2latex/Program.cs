@@ -187,16 +187,17 @@ namespace coq2latex
                 if (boundOrig.Count != bound.Count)
                     throw new FormatException("failure parsing original bound variable names for " + defName + "/" + name + " (count mismatch: " + string.Join(",", bound) + " vs " + string.Join(",", boundOrig) + ")");
                 for (int i = 0; i < bound.Count; ++i)
-                    def = def.Replace(bound[i], boundOrig[i]);
-
-                // get user choices for bound var names
-                def = def.EraseNamespaces();
-                foreach(var from in boundOrig)
                 {
-                    var to = ParseAlternativeName(inputParts, defName, name, from);
-                    if (to != null)
-                        def = def.Replace(from, to == @"\" ? @"\" + from : to);
+                    var src = bound[i];
+                    var dst = boundOrig[i];
+
+                    // get user choices for bound var
+                    var udef = ParseAlternativeName(inputParts, defName, name, boundOrig[i]);
+                    if (udef != null)
+                        dst = udef == @"\" ? @"\" + dst : udef;
+                    def = def.Replace(src, dst);
                 }
+                def = def.EraseNamespaces();
 
                 Debug.WriteLine(def);
 
@@ -208,15 +209,16 @@ namespace coq2latex
 
         static string CreateLatex(Expression expr, List<RewriteRule> rules)
         {
-            var args = expr.Tail.Select(arg => CreateLatex(arg, rules)).ToList();
             var matchingRule = rules
-                .Where(rule => 
-                    rule.Head == expr.Head && 
+                .Where(rule =>
+                    rule.Head == expr.Head &&
                     rule.Arity <= expr.Arity &&
                     rule.Match.Select((arg, i) => arg == null || arg == expr.Tail.ElementAt(i).ToString()).All(x => x)
                     )
                 .OrderByDescending(rule => rule.Arity)
                 .FirstOrDefault();
+
+            var args = expr.Tail.Select(arg => CreateLatex(arg, rules)).ToList();
 
             if (matchingRule != null)
                 args = new string[] { matchingRule.Rewrite(args.Take(matchingRule.Arity).ToArray()) }.Concat(
