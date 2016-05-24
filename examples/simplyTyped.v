@@ -60,7 +60,6 @@ Inductive SimpleExpressionHasType : SimpleEnvironment -> SimpleExpression -> Sim
     SimpleExpressionHasType env (ELambda x tau e) (TFunc tau tau')
 .
 
-
 (*coq2latex: @Some #_ #x := #x *)
 (*coq2latex: @eq #_ #a #b := #a = #b *)
 
