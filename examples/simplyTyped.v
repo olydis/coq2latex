@@ -45,19 +45,35 @@ Definition SimpleEnvironmentSet
 
 (*coq2latex: SimpleExpressionHasType #G #e #t := #G \vdash #e : #t *)
 Inductive SimpleExpressionHasType : SimpleEnvironment -> SimpleExpression -> SimpleType -> Prop :=
-| TyNum : forall n Gamma(*\*), SimpleExpressionHasType Gamma (EValue (VNum n)) TInt
-| TyTrue  : forall Gamma(*\*), SimpleExpressionHasType Gamma (EValue VTrue) TBool
-| TyFalse : forall Gamma(*\*), SimpleExpressionHasType Gamma (EValue VFalse) TBool
-| TyVariable : forall Gamma(*\*) tau(*\*) x,
-    Gamma x = Some tau ->
-    SimpleExpressionHasType Gamma (EVariable x) tau
-| TyApplication : forall Gamma(*\*) e_0 e_1 tau(*\*) tau'(*\*),
-    SimpleExpressionHasType Gamma e_0 (TFunc tau(*\*) tau'(*\*)) ->
-    SimpleExpressionHasType Gamma e_1 tau ->
-    SimpleExpressionHasType Gamma (EApplication e_0 e_1) tau'
-| TyLambda : forall Gamma(*\*) x e tau(*\*) tau'(*\*),
-    SimpleExpressionHasType (SimpleEnvironmentSet Gamma x tau) e tau' ->
-    SimpleExpressionHasType Gamma (ELambda x tau e) (TFunc tau tau')
+| TyNum : forall n env(*\Gamma*), SimpleExpressionHasType env (EValue (VNum n)) TInt
+| TyTrue  : forall env(*\Gamma*), SimpleExpressionHasType env (EValue VTrue) TBool
+| TyFalse : forall env(*\Gamma*), SimpleExpressionHasType env (EValue VFalse) TBool
+| TyVariable : forall env(*\Gamma*) tau(*\*) x,
+    env x = Some tau ->
+    SimpleExpressionHasType env (EVariable x) tau
+| TyApplication : forall env(*\Gamma*) e_0 e_1 tau(*\*) tau'(*\*),
+    SimpleExpressionHasType env e_0 (TFunc tau(*\*) tau'(*\*)) ->
+    SimpleExpressionHasType env e_1 tau ->
+    SimpleExpressionHasType env (EApplication e_0 e_1) tau'
+| TyLambda : forall env(*\Gamma*) x e tau(*\*) tau'(*\*),
+    SimpleExpressionHasType (SimpleEnvironmentSet env x tau) e tau' ->
+    SimpleExpressionHasType env (ELambda x tau e) (TFunc tau tau')
+.
+
+Inductive SimpleExpressionHasType : SimpleEnvironment -> SimpleExpression -> SimpleType -> Prop :=
+| TyNum : forall n env, SimpleExpressionHasType env (EValue (VNum n)) TInt
+| TyTrue  : forall env, SimpleExpressionHasType env (EValue VTrue) TBool
+| TyFalse : forall env, SimpleExpressionHasType env (EValue VFalse) TBool
+| TyVariable : forall env tau x,
+    env x = Some tau ->
+    SimpleExpressionHasType env (EVariable x) tau
+| TyApplication : forall env e_0 e_1 tau tau',
+    SimpleExpressionHasType env e_0 (TFunc tau tau') ->
+    SimpleExpressionHasType env e_1 tau ->
+    SimpleExpressionHasType env (EApplication e_0 e_1) tau'
+| TyLambda : forall env x e tau tau',
+    SimpleExpressionHasType (SimpleEnvironmentSet env x tau) e tau' ->
+    SimpleExpressionHasType env (ELambda x tau e) (TFunc tau tau')
 .
 
 
