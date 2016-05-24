@@ -2,6 +2,9 @@
 
 > **tl;wr** - clone repo, goto `examples`, launch `simplyTyped.[sh/bat]`, see how it works, adjust to your satisfaction
 
+- [Walkthrough](#walkthrough)
+- [Documentation](#documentation)
+
 ## What is it?
 A simple tool to auto-generate LaTeX inference rules from inductive propositions in your Coq file.
 ![Figure](https://raw.githubusercontent.com/olydis/coq2latex/master/doc/readmeFigure.png)
