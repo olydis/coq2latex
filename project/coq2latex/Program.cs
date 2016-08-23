@@ -237,15 +237,24 @@ namespace coq2latex
             var latexPremises = def.Premises.Select(x => CreateLatex(x, rules)).ToList();
             var latexConclusion = CreateLatex(def.Conclusion, rules);
 
+            string indent = "    ";
+
             // mathpartir
             var res = new StringBuilder();
             res.AppendLine(@"\begin{mathpar}");
             res.AppendLine(@"\inferrule* [Right=" + def.Name + "]");
+            res.AppendLine("{");
             if (latexPremises.Count == 0)
-                res.AppendLine("{~}");
+                res.AppendLine(indent + "~");
             else
-                res.AppendLine("{" + string.Join(@"\\", latexPremises) + "}");
-            res.AppendLine("{" + latexConclusion + "}");
+            {
+                for (int i = 0; i < latexPremises.Count; ++i)
+                    res.AppendLine(indent + latexPremises[i] + (i != latexPremises.Count - 1 ? @" \\" : ""));
+            }
+            res.AppendLine("}");
+            res.AppendLine("{");
+            res.AppendLine(indent + latexConclusion);
+            res.AppendLine("}");
             res.AppendLine(@"\end{mathpar}");
             return res.ToString();
         }
